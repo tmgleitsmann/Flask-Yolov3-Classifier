@@ -23,7 +23,6 @@ export const uploadFilesToReducer = (fileInfo) =>{
 };
 
 export const uploadFiles = (uploadData = {}, ) => {
-    console.log(uploadData);
     const reader = new FileReader();
     const {name, size, type} = uploadData;
     const typeList = type.split('/');
@@ -31,7 +30,6 @@ export const uploadFiles = (uploadData = {}, ) => {
 
     return (dispatch) => {
         const fileAsBlob = new Blob([uploadData], {type:uploadData.type});
-        console.log(fileAsBlob);
         const fr = new FileReader();
 
         fr.onload = async function() {
@@ -73,14 +71,3 @@ export const uploadFiles = (uploadData = {}, ) => {
     }
     return;
 };
-
-// const b64encodeHelper = (b64) => {
-//     var binaryString = window.atob(b64);
-//     var binaryLen = binaryString.length;
-//     var bytes = new Uint8Array(binaryLen);
-//     for (var i = 0; i < binaryLen; i++) {
-//         var ascii = binaryString.charCodeAt(i);
-//         bytes[i] = ascii;
-//     }
-//     return bytes;
-// }
