@@ -52,7 +52,7 @@ class Upload extends React.Component {
   
     renderProgress(file) {
         const uploadProgress = this.state.uploadProgress[file.name];
-        if (this.state.uploading || this.state.successfullUploaded) {
+        if ((this.state.uploading || this.state.successfullUploaded) && file.type == "image/jpeg") {
             return (
                 <div className="ProgressWrapper">
                     <Progress progress={uploadProgress ? uploadProgress.percentage : 0} />
@@ -67,6 +67,22 @@ class Upload extends React.Component {
                     />
                 </div>
             );
+        }
+        else if(file.type != "image/jpeg"){
+          return (
+            <div className="ProgressWrapper">
+                    <Progress progress={uploadProgress ? uploadProgress.percentage : 0} />
+                    <img
+                    className="CheckIcon"
+                    alt="done"
+                    src="../images/thumbnails/Delete.ico"
+                    style={{
+                        opacity:
+                        this.state.successfullUploaded ? 0.5 : 0
+                    }}
+                    />
+                </div>
+          );
         }
     }
   
