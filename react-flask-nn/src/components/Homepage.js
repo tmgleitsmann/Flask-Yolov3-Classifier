@@ -34,7 +34,7 @@ class Homepage extends React.Component{
                             <div className="col offset-lg-8 mx-auto text-center">
                                 <h2 className="text-white section-heading">We&#39;ve got what you need!</h2>
                                 <hr className="light my-4" />
-                                <p className="text-faded mb-4">Upload your media files to send to a server hosted flask application that classNameifies and tracks objects. Recieve updated media content alongside processing analytics.</p><NavLink className="btn btn-light btn-xl js-scroll-trigger" role="button"
+                                <p className="text-faded mb-4">Upload your media files to send to a server hosted flask application that classifies and tracks objects. Recieve updated media content alongside processing analytics.</p><NavLink className="btn btn-light btn-xl js-scroll-trigger" role="button"
                                     to="/upload">Upload media!</NavLink></div>
                         </div>
                     </div>
