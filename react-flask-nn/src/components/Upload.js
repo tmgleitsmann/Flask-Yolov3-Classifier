@@ -68,7 +68,7 @@ class Upload extends React.Component {
                 </div>
             );
         }
-        else if(file.type != "image/jpeg"){
+        else if((this.state.uploading || this.state.successfullUploaded) && file.type != "image/jpeg"){
           return (
             <div className="ProgressWrapper">
                     <Progress progress={uploadProgress ? uploadProgress.percentage : 0} />
