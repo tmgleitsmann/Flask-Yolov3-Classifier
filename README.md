@@ -38,6 +38,14 @@ On the Flask Side
 -Serialize our image into a base64 encoded string so we can assign it to our json response object. 
 -Send json response object back to our React Application.
 
+
+Originally I took a VGG16 model and retrained it to work on 4 classes; dogs, cats, cars and people. The model worked perfectly, however it wasn't capable of detecting multiple classes on one image and it wasn't capable of outputting where the mapped features were on the image. So I decided to copy the yolov3 layers and copy them over to a Keras model. 
+
+About the YoloV3 Model:
+It is MUCH larger than the VGG16 model I described perviously and therefore takes a little longer to run. Also, YoloV3 uses ReLU activation function so it is capable of not falsely providing a label when there is none (winner takes all) and can provide multiple labels when detected. The full summary of the YoloV3 model is available in architecture.py.
+
+
+
 What's also included:
 architecture.py file that you can use to see the architecture of the yolo model. Maybe you'd like to modify it before using it.
 
