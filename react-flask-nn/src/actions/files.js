@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toggleState } from './appstate'
 
 const flaskApiUrl = 'http://0.0.0.0:5000';
 
@@ -43,12 +44,15 @@ export const uploadFiles = (uploadData = {}, ) => {
 
             if(typeList[0] == 'image' && (ext =='jpeg') || (ext =='jpg')){
                 try{
+                    dispatch(toggleState(true));
                     const res = await axios
                     .post(`${flaskApiUrl}/image`, {name, size, type, ext, Uint8array})
                     .then((res) => {
                         dispatch(uploadFilesToReducer(res));
+                        dispatch(toggleState(false));
                     }) 
                 } catch{
+                    dispatch(toggleState(false));
                     return Promise.reject(res);
                 }
             }
@@ -67,7 +71,7 @@ export const uploadFiles = (uploadData = {}, ) => {
                 return;
             }
         }       
-        fr.readAsArrayBuffer(fileAsBlob)
+        fr.readAsArrayBuffer(fileAsBlob);
     }
     return;
 };
