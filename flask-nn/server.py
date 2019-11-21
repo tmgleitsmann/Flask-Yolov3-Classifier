@@ -17,6 +17,9 @@ import tensorflow as tf
 from matplotlib import pyplot
 from matplotlib.patches import Rectangle
 import cv2
+import glob
+
+import tempfile
 
 
 app = Flask(__name__)
@@ -97,11 +100,6 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
 
 #LOAD IN OUR MODEL TO GLOBAL VAR MODEL
 def get_model():
-
-	###########################################
-	#UNDER IS FOR YOLO MODEL
-	###########################################
-
 	global model
 	K.clear_session()
 	json_file = open('yolo_v3_model_architecture.json', 'r')
@@ -187,9 +185,6 @@ def _interval_overlap(interval_a, interval_b):
 #YOLOv3 DRAW
 # draw all results
 def draw_boxes(imfile, v_boxes, v_labels, v_scores):
-	# load the image
-	#data = pyplot.imread(filename)
-	# plot the image
 	image = img_to_array(imfile)
 
 	for i in range(len(v_boxes)):
@@ -211,19 +206,18 @@ def preprocess_image(image, target_size):
 	if image.mode != "RGB":
 		image = image.convert("RGB")
 	image = image.resize(target_size)
-	#YOLO LINE
-
 	image = img_to_array(image)
 	image = np.expand_dims(image, axis=0)
-
-	##FOR YOLO
-	#Scale pixel values to [0, 1]
 	image = image.astype('float32')
 	image/=255.0
-	#YOLO LINE
 	return image, width, height
 
-	#return image
+def appendToBoxes(prediction, boxes, targetSize):
+	for i in range(len(prediction)):
+		# decode the output of the network
+		boxes += decode_netout(prediction[i][0], anchors[i], class_threshold, targetSize[0], targetSize[1])
+	return boxes
+
 
 print(" * Loading Keras Model...")
 get_model()
@@ -238,42 +232,34 @@ def image():
 		global graph
 		with graph.as_default():
 			try:	
-				#Grab json request and apply pre-processing.
 				parse_req = request.get_json()
-				encoded = parse_req['Uint8array']
-				decoded = base64.b64decode(encoded)
+				decoded = base64.b64decode(parse_req['Uint8array'])
 				image = Image.open(io.BytesIO(decoded))
-				processed_image, image_w, image_h = preprocess_image(image, target_size=(416, 416))
 
-				#Begin predictions once pre-processed
-				prediction = model.predict(processed_image)
+				#Target size specified for yolo model.
+				targSize = (416, 416)
 
-				#Append boxes to empty boxes list.
-				boxes = list()
-				for i in range(len(prediction)):
-					# decode the output of the network
-					boxes += decode_netout(prediction[i][0], anchors[i], class_threshold, 416, 416)
+				#YOLO PRE PROCESS
+				processed_image, image_w, image_h = preprocess_image(image, target_size=targSize)
 
-				# correct the sizes of the bounding boxes for the shape of the image
-				correct_yolo_boxes(boxes, image_h, image_w, 416, 416)
-				# suppress non-maximal boxes
+				##########################################################################################
+				#Predict and Draw Boxes
+				prediction = model.predict(processed_image, image_w, image_h)
+				boxes = appendToBoxes(prediction, list(), targSize)
+				correct_yolo_boxes(boxes, image_h, image_w, targSize[0], targSize[1])
 				do_nms(boxes, 0.5)
-
-				# get the details of the detected objects
 				v_boxes, v_labels, v_scores = get_boxes(boxes, labels, class_threshold)
-
-				# draw what we found, if we've found anything.
 				pred_image = draw_boxes(image, v_boxes, v_labels, v_scores)
+				##########################################################################################
 
-				#We need to serialize our image so we can send it back to our application.
-				#change it to array of uint8, then base64 encode it. 
+
+				#Serialize and b64 encode our pic to send back.
 				pred_image = Image.fromarray(pred_image.astype("uint8"))
 				rawBytes = io.BytesIO()
 				pred_image.save(rawBytes, "jpeg")
 				rawBytes.seek(0)  # return to the start of the file
 				pred_image = base64.b64encode(rawBytes.read())
 				
-
 				#Create our response object and return it.
 				response = {
 					'name':parse_req['name'],
@@ -289,6 +275,7 @@ def image():
 			#If any problems arise in our try, return a failed response.
 			except Exception as e:
 				print(e)
+				print('some error occured')
 				return jsonify({
 					'name':"",
 					'size':0,
@@ -301,4 +288,96 @@ def image():
 			'size':0,
 			'processed':False
 		}
+	return jsonify(response)
+
+
+@app.route('/video', methods=['POST'])
+def video():   
+
+	response = {
+		'name':"",
+		'size':0,
+		'processed':False
+	}
+
+	if request.method == 'POST':
+		global graph
+		with graph.as_default():
+			try:
+				#initialize an image array to store processed frames.
+				img_array = []
+
+				parse_req = request.get_json()
+				decoded = base64.b64decode(parse_req['Uint8array'])
+
+				#We are writing a mp4 file here.
+				with open(parse_req['name'], 'wb') as wfile:
+					wfile.write(decoded)
+
+				cap = cv2.VideoCapture(parse_req['name'])
+
+				#Target size specified for yolo model.
+				targSize = (416, 416)
+
+				while(True):
+					success, frame = cap.read()
+					if success:
+						#store original height & width of frame for reconversion
+						height, width, layers = frame.shape
+						###############################################
+						#YOLO PRE PROCESS
+						frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+						frame = Image.fromarray(frame)
+						#pp_width & pp_height aren't needed for videos
+						pp_image, pp_width, pp_height = preprocess_image(frame, targSize)
+						###############################################
+
+						
+						#Predict and Draw Boxes
+						###############################################
+						prediction = model.predict(pp_image, width, height)
+						boxes = appendToBoxes(prediction, list(), targSize)
+						correct_yolo_boxes(boxes, height, width, targSize[0], targSize[1])
+						do_nms(boxes, 0.5)
+						v_boxes, v_labels, v_scores = get_boxes(boxes, labels, class_threshold)
+						frame = draw_boxes(frame, v_boxes, v_labels, v_scores)
+						frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+						###############################################
+
+						#append frame to image array as numpy uint8
+						img_array.append(frame.astype(np.uint8))
+
+					else:
+						break
+
+				cap.release()
+				os.remove(parse_req['name'])
+
+				#TO CHANGE LATER. RIGHT NOW WE ARE ASSUMING 30FPS. WILL NEED TO GRAB LATER
+				fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+				out = cv2.VideoWriter('modified-'+parse_req['name'], fourcc, 30, (width, height))
+
+				for i in range(len(img_array)):
+				    out.write(img_array[i])
+				out.release()
+
+				with open('modified-'+parse_req['name'], "rb") as videoFile:
+				    encoded_data = base64.b64encode(videoFile.read())
+
+				cv2.destroyAllWindows()
+				os.remove('modified-'+parse_req['name'])
+
+
+				#Create our response object and return it.
+				response['name'] = parse_req['name']
+				response['size'] = parse_req['size']
+				response['ext'] = 'video/mp4'
+				response['prediction_video'] = encoded_data
+				response['processed'] = True
+
+				return jsonify(response)
+
+			except Exception as e:
+				return jsonify(response)
+				
 	return jsonify(response)
