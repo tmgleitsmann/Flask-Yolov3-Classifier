@@ -315,6 +315,7 @@ def video():
 					wfile.write(decoded)
 
 				cap = cv2.VideoCapture(parse_req['name'])
+				fps = cap.get(cv2.CAP_PROP_FPS)
 
 				#Target size specified for yolo model.
 				targSize = (416, 416)
@@ -353,9 +354,8 @@ def video():
 				cap.release()
 				os.remove(parse_req['name'])
 
-				#TO CHANGE LATER. RIGHT NOW WE ARE ASSUMING 30FPS. WILL NEED TO GRAB LATER
 				fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-				out = cv2.VideoWriter('modified-'+parse_req['name'], fourcc, 30, (width, height))
+				out = cv2.VideoWriter('modified-'+parse_req['name'], fourcc, fps, (width, height))
 
 				for i in range(len(img_array)):
 				    out.write(img_array[i])
