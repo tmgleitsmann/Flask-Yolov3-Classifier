@@ -12,7 +12,7 @@ export default () => {
         combineReducers({
             files:filesReducer,
             appstate:appstateReducer
-        }), {appstate: {flaskProcessing:false}},composeEnhancers(applyMiddleware(thunk))
+        }), {appstate: {flaskProcessing:false, processesLeft:0}},composeEnhancers(applyMiddleware(thunk))
     );
     return store;
 }

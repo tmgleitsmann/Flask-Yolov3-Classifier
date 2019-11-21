@@ -1,7 +1,14 @@
 export const toggleState = (toToggle) =>{
-    
-    return {
-        type:'TOGGLE_STATE',
-        flaskProcessing:toToggle
-    };
+    if(toToggle){
+        return {
+            type:'TOGGLE_TRUE',
+            flaskProcessing:true,
+        };
+    }
+    else{
+        return {
+            type:'TOGGLE_FALSE',
+            flaskProcessing:false,
+        };
+    }
 };

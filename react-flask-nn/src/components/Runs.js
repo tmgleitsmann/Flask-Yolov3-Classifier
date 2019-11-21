@@ -26,13 +26,26 @@ class Runs extends React.Component{
                         </div>
                     </div>
                 </section>
-                {this.props.files.map(file => {
-                    return (    
-                        <div className="card" key={ file.name }><img className="card-img w-100 d-block" src={`data:image/${file.ext};base64,${file.processedImage}`}/>
-                            <div className="card-img-overlay">
-                                <h4>{file.name}</h4>
-                            </div>
+                {this.props.files.map((file, index) => {
+                    return(
+                        <div key={ index }>
+                        { file.ext == "image/jpeg" ?
+                        <div className="card"><img className="card-img w-100 d-block" src={`data:/${file.ext};base64,${file.processedImage}`}/>
+                        <div className="card-img-overlay">
+                            <h4>{file.name}</h4>
                         </div>
+                        </div>
+                        :
+                        <div className="card">
+                        <div className="card-img-overlay">
+                            <h4>{file.name}</h4>
+                            <h5>{file.ext}</h5>
+                            <p>Check your downloads to see results</p>
+                        </div>
+                        </div>
+                        }
+                        </div>
+                    
                     );
                })}
             </div>

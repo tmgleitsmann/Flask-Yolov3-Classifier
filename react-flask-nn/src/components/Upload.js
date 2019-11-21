@@ -52,7 +52,7 @@ class Upload extends React.Component {
   
     renderProgress(file) {
         const uploadProgress = this.state.uploadProgress[file.name];
-        if ((this.state.uploading || this.state.successfullUploaded) && file.type == "image/jpeg") {
+        if ((this.state.uploading || this.state.successfullUploaded) && (file.type == "image/jpeg" || file.type == "video/mp4")) {
             return (
                 <div className="ProgressWrapper">
                     <Progress progress={uploadProgress ? uploadProgress.percentage : 0} />
@@ -67,22 +67,6 @@ class Upload extends React.Component {
                     />
                 </div>
             );
-        }
-        else if((this.state.uploading || this.state.successfullUploaded) && file.type != "image/jpeg"){
-          return (
-            <div className="ProgressWrapper">
-                    <Progress progress={uploadProgress ? uploadProgress.percentage : 0} />
-                    <img
-                    className="CheckIcon"
-                    alt="done"
-                    src="../images/thumbnails/Delete.ico"
-                    style={{
-                        opacity:
-                        this.state.successfullUploaded ? 0.5 : 0
-                    }}
-                    />
-                </div>
-          );
         }
     }
   
@@ -129,7 +113,8 @@ class Upload extends React.Component {
                             <div className="col">
                                 
                                     <div className="card-body">
-                                        <p className="card-text">Have an jpeg image you want to classify? Go ahead and upload your images.</p>
+                                        <p className="card-text">Have a jpeg image you want to classify? Have a mp4 video you want to process?</p>
+                                        <p className="card-text">Go ahead and upload em.</p>
                                         <div className="col-lg-8 mx-auto">{this.renderActions()}</div>
                                         <div className="Files">
                                             {this.state.files.map(file => {

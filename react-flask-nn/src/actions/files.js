@@ -20,6 +20,7 @@ export const uploadFilesToReducer = (fileInfo) =>{
         scores:fileInfo.data.prediction_scores,
         labels:fileInfo.data.prediction_labels,
         processedImage:fileInfo.data.prediction_image,
+        processedVideo:fileInfo.data.prediction_video
     };
 };
 
@@ -39,7 +40,6 @@ export const uploadFiles = (uploadData = {}, ) => {
                 new Uint8Array(arrayBuff)
                   .reduce((data, byte) => data + String.fromCharCode(byte), '')
               );
-
             uploadData["Uint8array"] = Uint8array;
 
             if(typeList[0] == 'image' && (ext =='jpeg') || (ext =='jpg')){
@@ -56,12 +56,15 @@ export const uploadFiles = (uploadData = {}, ) => {
                     return Promise.reject(res);
                 }
             }
-            else if(typeList[0] == 'video'){
+            else if(typeList[0] == 'video' && (ext =='mp4')){
                 try{
+                    dispatch(toggleState(true));
                     const res = await axios
                     .post(`${flaskApiUrl}/video`, {name, size, type, ext, Uint8array})
                     .then((res) => {
-                        dispatch(uploadFilesToReducer(uploadData));
+                        dispatch(uploadFilesToReducer(res));
+                        dispatch(toggleState(false));
+                        download(res);
                     }) 
                 } catch{
                     return Promise.reject(res);
@@ -75,3 +78,16 @@ export const uploadFiles = (uploadData = {}, ) => {
     }
     return;
 };
+
+function download(res) {
+    var element = document.createElement('a');
+    element.setAttribute('href', 'data:video/mp4;base64,' + res.data.prediction_video);
+    element.setAttribute('download', 'processed-'+res.data.name);
+  
+    element.style.display = 'none';
+    document.body.appendChild(element);
+  
+    element.click();
+  
+    document.body.removeChild(element);
+  }
