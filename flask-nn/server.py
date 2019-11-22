@@ -1,5 +1,7 @@
 import os
 os.environ['KERAS_BACKEND'] = 'tensorflow'
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import base64
 import numpy as np
 import io
@@ -14,11 +16,10 @@ from flask import jsonify
 from flask import request
 from flask_cors import CORS
 import tensorflow as tf
+from tensorflow.python.client import device_lib
 from matplotlib import pyplot
 from matplotlib.patches import Rectangle
 import cv2
-import glob
-
 import tempfile
 
 
@@ -108,8 +109,8 @@ def get_model():
 	model = model_from_json(loaded_model_json)
 
 	model.load_weights('yolo.h5')
-	print(" *Model Loaded!")
-	model.summary()
+	#print(" *Model Loaded!")
+	#model.summary()
 
 
 
@@ -219,6 +220,8 @@ def appendToBoxes(prediction, boxes, targetSize):
 	return boxes
 
 
+#print(device_lib.list_local_devices())
+K.tensorflow_backend._get_available_gpus()
 print(" * Loading Keras Model...")
 get_model()
 graph = tf.get_default_graph()
@@ -317,45 +320,61 @@ def video():
 				cap = cv2.VideoCapture(parse_req['name'])
 				fps = cap.get(cv2.CAP_PROP_FPS)
 
+				###############################################
+				#This will be used to sample. Convert 20-30fps/60fps videos to 30.
+				#some videos are 29.95/97 or 59.95/97 so we'll account for those too.
+				sample_frames = 1
+				current_sample = 1
+				if fps > 19 and fps < 31:
+					sample_frames = 2
+				if fps > 59 and fps < 61:
+					sample_frames = 4
+				current_sampled = sample_frames
+				###############################################
+
 				#Target size specified for yolo model.
 				targSize = (416, 416)
 
 				while(True):
 					success, frame = cap.read()
 					if success:
-						#store original height & width of frame for reconversion
-						height, width, layers = frame.shape
-						###############################################
-						#YOLO PRE PROCESS
-						frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-						frame = Image.fromarray(frame)
-						#pp_width & pp_height aren't needed for videos
-						pp_image, pp_width, pp_height = preprocess_image(frame, targSize)
-						###############################################
+						if current_sampled == sample_frames:
+							#store original height & width of frame for reconversion
+							height, width, layers = frame.shape
+							###############################################
+							#YOLO PRE PROCESS
+							frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+							frame = Image.fromarray(frame)
+							#pp_width & pp_height aren't needed for videos
+							pp_image, pp_width, pp_height = preprocess_image(frame, targSize)
+							###############################################
 
-						
-						#Predict and Draw Boxes
-						###############################################
-						prediction = model.predict(pp_image, width, height)
-						boxes = appendToBoxes(prediction, list(), targSize)
-						correct_yolo_boxes(boxes, height, width, targSize[0], targSize[1])
-						do_nms(boxes, 0.5)
-						v_boxes, v_labels, v_scores = get_boxes(boxes, labels, class_threshold)
-						frame = draw_boxes(frame, v_boxes, v_labels, v_scores)
-						frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-						###############################################
+							
+							#Predict and Draw Boxes
+							###############################################
+							prediction = model.predict(pp_image, width, height)
+							boxes = appendToBoxes(prediction, list(), targSize)
+							correct_yolo_boxes(boxes, height, width, targSize[0], targSize[1])
+							do_nms(boxes, 0.5)
+							v_boxes, v_labels, v_scores = get_boxes(boxes, labels, class_threshold)
+							frame = draw_boxes(frame, v_boxes, v_labels, v_scores)
+							frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+							###############################################
 
-						#append frame to image array as numpy uint8
-						img_array.append(frame.astype(np.uint8))
+							#append frame to image array as numpy uint8
+							img_array.append(frame.astype(np.uint8))
+							current_sampled = 0							
 
+						current_sampled+=1
 					else:
 						break
 
 				cap.release()
+				print('cleanup original file')
 				os.remove(parse_req['name'])
 
 				fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-				out = cv2.VideoWriter('modified-'+parse_req['name'], fourcc, fps, (width, height))
+				out = cv2.VideoWriter('modified-'+parse_req['name'], fourcc, fps/sample_frames, (width, height))
 
 				for i in range(len(img_array)):
 				    out.write(img_array[i])
@@ -365,12 +384,12 @@ def video():
 				    encoded_data = base64.b64encode(videoFile.read())
 
 				cv2.destroyAllWindows()
+				print('cleanup modified file')
 				os.remove('modified-'+parse_req['name'])
 
-
 				#Create our response object and return it.
-				response['name'] = parse_req['name']
-				response['size'] = parse_req['size']
+				response['name'] = 'modified-'+parse_req['name']
+				response['size'] = 4*(len(encoded_data)/3)
 				response['ext'] = 'video/mp4'
 				response['prediction_video'] = encoded_data
 				response['processed'] = True
