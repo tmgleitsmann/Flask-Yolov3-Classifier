@@ -17,10 +17,7 @@ export const uploadFilesToReducer = (fileInfo) =>{
         name:fileInfo.data.name,
         size:fileInfo.data.size,
         processed:fileInfo.data.processed,
-        scores:fileInfo.data.prediction_scores,
-        labels:fileInfo.data.prediction_labels,
-        processedImage:fileInfo.data.prediction_image,
-        processedVideo:fileInfo.data.prediction_video
+        processedImage:fileInfo.data.prediction_image
     };
 };
 
@@ -64,7 +61,7 @@ export const uploadFiles = (uploadData = {}, ) => {
                     .then((res) => {
                         dispatch(uploadFilesToReducer(res));
                         dispatch(toggleState(false));
-                        download(res);
+                        save(res.data.name, res.data.prediction_video);
                     }) 
                 } catch{
                     return Promise.reject(res);
@@ -79,15 +76,37 @@ export const uploadFiles = (uploadData = {}, ) => {
     return;
 };
 
-function download(res) {
-    var element = document.createElement('a');
-    element.setAttribute('href', 'data:video/mp4;base64,' + res.data.prediction_video);
-    element.setAttribute('download', 'processed-'+res.data.name);
+function b64toBlob(b64Data, contentType='video/mp4', sliceSize=512) {
+    const byteCharacters = atob(b64Data);
+    const byteArrays = [];
   
-    element.style.display = 'none';
-    document.body.appendChild(element);
+    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+      const slice = byteCharacters.slice(offset, offset + sliceSize);
   
-    element.click();
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
   
-    document.body.removeChild(element);
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+  
+    const blob = new Blob(byteArrays, {type: contentType});
+    return blob;
   }
+
+function save(filename, data) {
+    var blob = b64toBlob(data);
+    if(window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveBlob(blob, filename);
+    }
+    else{
+        var elem = window.document.createElement('a');
+        elem.href = window.URL.createObjectURL(blob);
+        elem.download = filename;        
+        document.body.appendChild(elem);
+        elem.click();        
+        document.body.removeChild(elem);
+    }
+}
