@@ -24,7 +24,7 @@ class Homepage extends React.Component{
                             </div>
                         </div>
                         <div className="col-lg-8 mx-auto">
-                            <p className="text-faded mb-5">We do the heavy lifting for you. Just upload your images or videos and allow us to detect and track objects for you. *Videos in beta*</p>
+                            <p className="text-faded mb-5">We do the heavy lifting for you. Just upload your images or videos and allow us to detect and track objects for you.</p>
                         </div>
                     </div>
                 </header>
