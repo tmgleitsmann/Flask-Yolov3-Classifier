@@ -109,7 +109,7 @@ def get_model():
 	model = model_from_json(loaded_model_json)
 
 	model.load_weights('yolo.h5')
-	#print(" *Model Loaded!")
+	print(" *Model Loaded!")
 	#model.summary()
 
 
@@ -219,7 +219,6 @@ def appendToBoxes(prediction, boxes, targetSize):
 		boxes += decode_netout(prediction[i][0], anchors[i], class_threshold, targetSize[0], targetSize[1])
 	return boxes
 
-
 #print(device_lib.list_local_devices())
 K.tensorflow_backend._get_available_gpus()
 print(" * Loading Keras Model...")
@@ -293,7 +292,6 @@ def image():
 		}
 	return jsonify(response)
 
-
 @app.route('/video', methods=['POST'])
 def video():   
 
@@ -308,29 +306,29 @@ def video():
 		with graph.as_default():
 			try:
 				#initialize an image array to store processed frames.
-				img_array = []
-
 				parse_req = request.get_json()
 				decoded = base64.b64decode(parse_req['Uint8array'])
-
 				#We are writing a mp4 file here.
 				with open(parse_req['name'], 'wb') as wfile:
 					wfile.write(decoded)
 
+
 				cap = cv2.VideoCapture(parse_req['name'])
 				fps = cap.get(cv2.CAP_PROP_FPS)
-
+				width = int(cap.get(3))
+				height = int(cap.get(4))
 				###############################################
 				#This will be used to sample. Convert 20-30fps/60fps videos to 30.
 				#some videos are 29.95/97 or 59.95/97 so we'll account for those too.
 				sample_frames = 1
-				current_sample = 1
 				if fps > 19 and fps < 31:
 					sample_frames = 2
 				if fps > 59 and fps < 61:
 					sample_frames = 4
 				current_sampled = sample_frames
-				###############################################
+				fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+				out = cv2.VideoWriter('modified-'+parse_req['name'], fourcc, fps/sample_frames, (width, height))
+
 
 				#Target size specified for yolo model.
 				targSize = (416, 416)
@@ -340,18 +338,14 @@ def video():
 					if success:
 						if current_sampled == sample_frames:
 							#store original height & width of frame for reconversion
-							height, width, layers = frame.shape
 							###############################################
 							#YOLO PRE PROCESS
 							frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 							frame = Image.fromarray(frame)
-							#pp_width & pp_height aren't needed for videos
+							#Pre-processing
 							pp_image, pp_width, pp_height = preprocess_image(frame, targSize)
 							###############################################
-
-							
 							#Predict and Draw Boxes
-							###############################################
 							prediction = model.predict(pp_image, width, height)
 							boxes = appendToBoxes(prediction, list(), targSize)
 							correct_yolo_boxes(boxes, height, width, targSize[0], targSize[1])
@@ -360,9 +354,7 @@ def video():
 							frame = draw_boxes(frame, v_boxes, v_labels, v_scores)
 							frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 							###############################################
-
-							#append frame to image array as numpy uint8
-							img_array.append(frame.astype(np.uint8))
+							out.write(frame.astype(np.uint8))
 							current_sampled = 0							
 
 						current_sampled+=1
@@ -370,18 +362,14 @@ def video():
 						break
 
 				cap.release()
+				out.release()
 				print('cleanup original file')
 				os.remove(parse_req['name'])
 
-				fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-				out = cv2.VideoWriter('modified-'+parse_req['name'], fourcc, fps/sample_frames, (width, height))
-
-				for i in range(len(img_array)):
-				    out.write(img_array[i])
-				out.release()
-
+				data=None
 				with open('modified-'+parse_req['name'], "rb") as videoFile:
-				    encoded_data = base64.b64encode(videoFile.read())
+					data = videoFile.read()
+					encoded_data = base64.b64encode(data)
 
 				cv2.destroyAllWindows()
 				print('cleanup modified file')
@@ -389,7 +377,7 @@ def video():
 
 				#Create our response object and return it.
 				response['name'] = 'modified-'+parse_req['name']
-				response['size'] = 4*(len(encoded_data)/3)
+				response['size'] = len(data)
 				response['ext'] = 'video/mp4'
 				response['prediction_video'] = encoded_data
 				response['processed'] = True
