@@ -16,7 +16,7 @@ https://github.com/OlafenwaMoses/ImageAI/releases/download/1.0/yolo-tiny.h5
 5) Create a virtual environment to host the flask application in. Install the dependencies provided in the requirements.txt file.
 
 6) Host the flask application on your virtual environment by...
-  export FLASK_APP=server.py
+  export FLASK_APP=serverv3.py
   flask run --host=0.0.0.0
   *Note* the flask application loads the yolov3 model on startup. This model is reasonably sized (237mb), so it may take time to load. Can change to the tiny version of yolo, however it will be less accurate.
   
