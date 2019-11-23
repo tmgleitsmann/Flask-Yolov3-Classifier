@@ -2,7 +2,6 @@ import axios from "axios";
 import { toggleState } from './appstate'
 
 const flaskApiUrl = 'http://0.0.0.0:5000';
-
 export const removeFile = ({ name } = {}) => {
     return{
         type:'REMOVE_FILE',
@@ -64,6 +63,7 @@ export const uploadFiles = (uploadData = {}, ) => {
                         save(res.data.name, res.data.prediction_video);
                     }) 
                 } catch{
+                    dispatch(toggleState(false));
                     return Promise.reject(res);
                 }
             }
