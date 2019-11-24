@@ -16,6 +16,7 @@ class Header extends React.Component{
                             aria-label="Toggle navigation"><i className="fa fa-align-justify"></i></button>
                         <div className="collapse navbar-collapse" id="navbarResponsive">
                             <ul className="nav navbar-nav ml-auto">
+                                <li role="presentation" className="nav-item"><NavLink className="nav-link js-scroll-trigger" to="/About">About</NavLink></li>
                                 <li role="presentation" className="nav-item"><NavLink className="nav-link js-scroll-trigger" to="/Upload">Upload</NavLink></li>
                                 <li role="presentation" className="nav-item"><NavLink className="nav-link js-scroll-trigger" to="/Runs">Runs</NavLink></li>
                             </ul>

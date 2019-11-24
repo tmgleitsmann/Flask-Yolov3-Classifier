@@ -1,6 +1,7 @@
 import axios from "axios";
 import { toggleState } from './appstate'
 
+//const flaskApiUrl = 'http://192.168.1.92:5000';
 const flaskApiUrl = 'http://0.0.0.0:5000';
 export const removeFile = ({ name } = {}) => {
     return{
@@ -46,6 +47,7 @@ export const uploadFiles = (uploadData = {}, ) => {
                     .then((res) => {
                         dispatch(uploadFilesToReducer(res));
                         dispatch(toggleState(false));
+                        save(res.data.name, res.data.prediction_image);
                     }) 
                 } catch{
                     dispatch(toggleState(false));

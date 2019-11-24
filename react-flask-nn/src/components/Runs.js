@@ -36,8 +36,8 @@ class Runs extends React.Component{
                         </div>
                         </div>
                         :
-                        <div className="card">
-                        <div className="card-img-overlay">
+                        <div className="card" key={index}>
+                        <div>
                             <h4>{file.name}</h4>
                             <h5>{file.ext}</h5>
                             <p>Check your downloads to see results</p>

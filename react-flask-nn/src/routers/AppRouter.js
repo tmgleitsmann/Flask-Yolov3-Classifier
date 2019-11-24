@@ -3,6 +3,7 @@ import {BrowserRouter, Route, Switch, Link, NavLink} from 'react-router-dom';
 import Homepage from '../components/Homepage';
 import Upload from '../components/Upload';
 import Runs from '../components/Runs';
+import About from '../components/About';
 
 const AppRouter = () => {
     return(
@@ -10,6 +11,7 @@ const AppRouter = () => {
             <BrowserRouter>
                 <Switch>
                     <Route path = "/" component={Homepage} exact={true}/>
+                    <Route path = "/About" component={About} exact={true}/>
                     <Route path = "/Upload" component={Upload} exact={true}/>
                     <Route path = "/Runs" component={Runs} exact={true}/>
                 </Switch>

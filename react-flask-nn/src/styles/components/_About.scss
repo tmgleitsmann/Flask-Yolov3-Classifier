@@ -1,0 +1,26 @@
+header.masthead {
+    position: relative;
+    width: 100%;
+    padding-top: 150px;
+    padding-bottom: 100px;
+    color: #fff;
+    background: #7b4397;
+    background: linear-gradient(270deg,#7b4397,#dc2430);
+  }
+  
+  header.masthead .device-container .screen img {
+    border-radius: 3px;
+  }
+  
+  .img-fluid, .img-thumbnail {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  img, svg {
+    vertical-align: middle;
+  }
+  
+  img {
+    border-style: none;
+  }
