@@ -3,7 +3,7 @@ React Application that sends jpg images to run against flask hosted neural netwo
 
 GETTING STARTED
 1) You will need to get your hands on the yolo.h5 model file (for yolov3). Since it is quite large, I'll provide a link to it:
-https://github.com/OlafenwaMoses/ImageAI/releases/download/1.0/yolo.h5 *yolo-tiny.h5 file* https://github.com/OlafenwaMoses/ImageAI/releases/download/1.0/yolo-tiny.h5 *put the .h5 file in the model_data folder*
+https://github.com/OlafenwaMoses/ImageAI/releases/download/1.0/yolo.h5                                                     *yolo-tiny.h5 file* https://github.com/OlafenwaMoses/ImageAI/releases/download/1.0/yolo-tiny.h5                              *put the .h5 file in the model_data folder*
 
 2) You will need to npm install the required packages for the react application.
 
