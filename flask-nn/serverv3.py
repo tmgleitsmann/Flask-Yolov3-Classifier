@@ -21,6 +21,8 @@ from flask_cors import CORS
 
 from model import yolo_eval, yolo_body, tiny_yolo_body
 from utils import image_preporcess
+# import yolo_eval, yolo_body, tiny_yolo_body
+# import image_preporcess
 
 import tensorflow as tf
 from tensorflow.python.client import device_lib
@@ -28,6 +30,8 @@ from tensorflow.python.client import device_lib
 # from matplotlib import pyplot
 # from matplotlib.patches import Rectangle
 import cv2
+import moviepy.editor as mp
+
 #import tempfile
 
 
@@ -35,19 +39,15 @@ app = Flask(__name__)
 CORS(app)
 
 class YOLO():
-
-	@classmethod
-	def get_defaults(cls, n):
-		if n in cls.defaults:
-			return cls._defaults[n]
-		else:
-			return "unrecognized attribute name '"+n+"'"
-
 	def __init__(self, **kwargs):
 		self.model_path = 'model_data/yolo.h5'
 		self.anchors_path = 'model_data/yolo_anchors.txt'
 		self.json_path = 'model_data/yolo_v3_model_architecture.json'
 		self.classes_path = 'model_data/classes.txt'
+		# self.model_path = 'yolo.h5'
+		# self.anchors_path = 'yolo_anchors.txt'
+		# self.json_path = 'yolo_v3_model_architecture.json'
+		# self.classes_path = 'classes.txt'
 		self.model_image_size = (416, 416)
 		self.text_size = 1
 		self.iou = 0.5
@@ -75,11 +75,9 @@ class YOLO():
 	def generate(self):
 		model_path = self.model_path
 		#assert self.model_path.endswith('.h5') #model must be a h5 file
-
 		#load model/construct model & load weights
 		num_anchors = len(self.anchors)
 		num_classes = len(self.class_names)
-		print(num_classes)
 		is_tiny_version = num_anchors==6 #checking to see if yolov3-tiny
 		try:
 			json_file = open(self.json_path, 'r')
@@ -90,8 +88,8 @@ class YOLO():
 			self.yolo_model = model
 			
 		except:
-			assert self.yolo_model.layers[-1].output_shape[-1] == \
-				num_anchors/len(self.yolo_model.output)*(num_classes +5), \
+			# assert self.yolo_model.layers[-1].output_shape[-1] == \
+			# 	num_anchors/len(self.yolo_model.output)*(num_classes +5), \
 				'Mismatch between model and given anchor & class sizes'
 
 		#Generate colors for drawing bounding boxes.
@@ -109,32 +107,30 @@ class YOLO():
 			len(self.class_names), self.input_image_shape, score_threshold=self.score,
 			iou_threshold=self.iou)
 
+
 		return boxes, scores, classes
 
 	def detect_image(self, image):
-		print(self.model_image_size, ' : self.model_image_size')
 		if self.model_image_size != (None, None):
 			assert self.model_image_size[0]%32 == 0, 'Multiples of 32 required'
 			assert self.model_image_size[1]%32 == 0, 'Multiples of 32 required'
 			boxed_image = image_preporcess(np.copy(image), tuple(reversed(self.model_image_size)))
 			image_data = boxed_image
 
- 		
-		#prediction = self.yolo_model.predict(image_data, 416,416)
-		#CODE IS BREAKING HERE...
-		print(self.boxes, self.scores, self.classes)
-		print(self.input_image_shape)
-		print(image.shape)
+ 		#We feed in our boxes, scores and classes tensors into Keras with placeholder tensors
+ 		# of our input image and shape. We get back our output boxes, scores and classes
 		out_boxes, out_scores, out_classes = self.sess.run([self.boxes, self.scores, self.classes],
 			feed_dict={
 				self.yolo_model.input: image_data,
-				self.input_image_shape: [image.shape[0], image.shape[1]]
+				self.input_image_shape: [image.shape[0], image.shape[1]],
 			})
 
 		thickness = (image.shape[0] + image.shape[1] // 600)
 		fontScale = 1
 		ObjectsList = []
 
+		#c -> index of the predicted class in out_classes.
+		#i -> The corresponding box that we'll need to unpack.
 		for i, c in reversed(list(enumerate(out_classes))):
 			predicted_class = self.class_names[c]
 			box = out_boxes[i]
@@ -142,22 +138,23 @@ class YOLO():
 			label = '{} {:.2f}'.format(predicted_class, score)
 			scores = '{:.2f}'.format(score)
 
+			#unpack our box.
 			top, left, bottom, right = box
 			top = max(0, np.floor(top+0.5).astype('int32'))
 			left = max(0, np.floor(left+0.5).astype('int32'))
 			bottom = min(image.shape[0], np.floor(bottom+0.5).astype('int32'))
 			right = min(image.shape[1], np.floor(right + 0.5).astype('int32'))
 
-			# We probs won't need mid_h mid_v. We'll leave for now though.
+			#Draw bounding box, text box and class text
+			cv2.rectangle(image, (left, top), (right, bottom), self.colors[c], 3)#thickness is 3 for now
+			(test_width, text_height), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, .8, 1)
+			cv2.rectangle(image, (left, top), (left+test_width, top-text_height-baseline), self.colors[c], thickness=cv2.FILLED)
+			cv2.putText(image, label, (left, top-2), cv2.FONT_HERSHEY_SIMPLEX, .8, (0, 0, 0), 2)
+
+
 			mid_h = (bottom-top)/2+top
 			mid_v = (right-left)/2+left
 
-			#put object rectangle
-			cv2.rectangle(image, (left, top), (right, bottom), self.colors[c], 3)#thickness is 3 for now
-			#get text size and put text
-			#(test_width, text_height), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, thickness/self.text_size, 1)
-			#cv2.rectangle(image, (left, top), (left+test_width, top-text_height-baseline), self.colors[c], thickness=cv2.FILLED)
-			cv2.putText(image, label, (left, top-2), cv2.FONT_HERSHEY_SIMPLEX, .8, (0, 0, 0), 2)
 			ObjectsList.append([top, left, bottom, right, mid_v, mid_h, label, scores])
 
 		return image, ObjectsList
@@ -175,15 +172,17 @@ class YOLO():
 
 
 
+
+
 #print(device_lib.list_local_devices())
-K.tensorflow_backend._get_available_gpus()
-print(" * Loading Keras Model...")
+# K.tensorflow_backend._get_available_gpus()
+# print(" * Loading Keras Model...")
 #get_model()
 K.clear_session()
 graph = tf.get_default_graph()
-print('grabbing yolo model')
 yolo = YOLO()
-print('grabbed')
+
+
 
 
 
@@ -247,38 +246,32 @@ def video():
 	global graph
 	with graph.as_default():
 		try:
-			print('inside try')
 			#Grab our request object and decode it.
 			parse_req = request.get_json()
 			decoded = base64.b64decode(parse_req['Uint8array'])
-			print('grabbed decoded')
 
 			#We need to write this decoded video so opencv can read it properly.
 			with open(parse_req['name'], 'wb') as wfile:
 				wfile.write(decoded)
 
-			print('writing attribs')
 			#Build video capture object and grab video properties.
 			cap = cv2.VideoCapture(parse_req['name'])
 			fps = cap.get(cv2.CAP_PROP_FPS)
 			width = int(cap.get(3))
 			height = int(cap.get(4))
-			print('writing videowriter obj')
 			#if we want to sample, that will go here. Leaving out for now.
 			fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 			out = cv2.VideoWriter('modified-'+parse_req['name'], fourcc, fps, (width, height))
-			print('wrote the videowriter object')
 
 			while True:
 				success, frame = cap.read()
 				if success:
-					print(type(frame), 'frame type')
 					#we'll pre-process, predict and draw here
 					frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+					#Predict on current frame.
 					r_image, ObjectsList = yolo.detect_img(frame)
-					# for i in range(len(ObjectsList)):
-					# 	print(ObjectsList[i])
-					print('detected frame')
+
 					frame = cv2.cvtColor(r_image, cv2.COLOR_RGB2BGR)
 					out.write(frame.astype(np.uint8))
 					
@@ -288,13 +281,21 @@ def video():
 			#Release cap and out capture/writer objects.
 			cap.release()
 			out.release()
-			#Remove the file we had to write in the beginning
-			print('cleanup original file')
+
+			processed = mp.VideoFileClip('modified-'+parse_req['name'])
+			print('cleanup modified video file')
+			os.remove('modified-'+parse_req['name'])
+
+			audio = mp.VideoFileClip(parse_req['name'])
+			print('cleanup modified video file')
 			os.remove(parse_req['name'])
+
+			processed.audio = audio.audio
+			processed.write_videofile('modified-'+parse_req['name'], temp_audiofile="temp-audio.m4a", remove_temp=True, codec="libx264", audio_codec="aac")
+
 			#read the modified video as bytes so we can base64 encode it. setting data so we can use in our response object
 			with open('modified-'+parse_req['name'], "rb") as videoFile:
 				data = videoFile.read()
-				print(len(data), 'length at end')
 				encoded_data = base64.b64encode(data)
 
 
@@ -307,8 +308,9 @@ def video():
 
 			#Remove the modified video file we wrote and destory any cv2 windows
 			cv2.destroyAllWindows()
-			print('cleanup modified file')
+			print('cleanup modified video file')
 			os.remove('modified-'+parse_req['name'])
+
 
 		except Exception as e:
 			return jsonify(response)
